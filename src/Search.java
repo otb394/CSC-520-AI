@@ -1,12 +1,15 @@
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class Search {
     private static List<Vertex> VERTICES =
@@ -286,18 +289,36 @@ public class Search {
             this.secondCity = secondCity;
             this.distance = distance;
         }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            Edge edge = (Edge) o;
+            return distance == edge.distance &&
+                    Objects.equals(firstCity, edge.firstCity) &&
+                    Objects.equals(secondCity, edge.secondCity);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(firstCity, secondCity, distance);
+        }
     }
 
     private static class Graph {
         public Map<Vertex, Set<Edge>> adjList;
+        public Map<String, Vertex> nameToVertex;
 
         public Graph() {
             this.adjList = new HashMap<>();
+            this.nameToVertex = new HashMap<>();
         }
 
         public Graph addVertex(Vertex v) {
             Set<Edge> edges = Optional.ofNullable(adjList.get(v)).orElseGet(HashSet::new);
             adjList.put(v, edges);
+            nameToVertex.put(v.cityName, v);
             return this;
         }
 
@@ -307,7 +328,8 @@ public class Search {
             Set<Edge> edges1 = Optional.ofNullable(adjList.get(v1)).orElseGet(HashSet::new);
             Set<Edge> edges2 = Optional.ofNullable(adjList.get(v2)).orElseGet(HashSet::new);
             edges1.add(e);
-            edges2.add(e);
+            Edge reverseEdge = new Edge(v2, v1, e.distance);
+            edges2.add(reverseEdge);
             adjList.put(v1, edges1);
             adjList.put(v2, edges2);
             return this;
@@ -316,20 +338,150 @@ public class Search {
 
     public static Graph intializeGraph() {
         Graph graph = new Graph();
-        Map<String, Vertex> nameToVertex = VERTICES.stream()
-                .collect(Collectors.toMap(vert -> vert.cityName, vert -> vert));
         for (Vertex v: VERTICES) {
             graph.addVertex(v);
         }
         for (EdgeData ed: EDGES) {
-            Vertex firstV = nameToVertex.get(ed.firstCityName);
-            Vertex secondV = nameToVertex.get(ed.secondCityName);
+            Vertex firstV = graph.nameToVertex.get(ed.firstCityName);
+            Vertex secondV = graph.nameToVertex.get(ed.secondCityName);
             graph.addEdge(new Edge(firstV, secondV, ed.distance));
         }
         return graph;
     }
 
+    public static double sq(double x) {
+        return x*x;
+    }
+
+    public static double sphericalHeuristic(Vertex v1, Vertex v2) {
+        double lat1 = v1.latitude;
+        double lat2 = v2.latitude;
+        double long1 = v1.longitude;
+        double long2 = v2.longitude;
+        //sqrt(  (69.5 * (Lat1 - Lat2)  ) ^ 2 + (69.5 * cos((Lat1 + Lat2)/360 * pi) * (Long1 - Long2)) ^ 2).
+        return Math.sqrt(sq(69.5 * (lat1 - lat2))
+                + sq(69.5 * (Math.cos(((lat1+lat2)/360.0)*Math.PI)) * (long1 - long2)));
+    }
+
+    public static double myHeuristic(Vertex v1, Vertex v2) {
+        //TODO: Implement the hop heuristic
+        return sphericalHeuristic(v1, v2);
+    }
+
+    public static void DFS(Graph g, String source, String destination) {
+        Vertex sourceV = g.nameToVertex.get(source);
+        Vertex destV = g.nameToVertex.get(destination);
+        System.out.println("DFS");
+        Map<Vertex, Boolean> visited = new HashMap<>();
+        for (Vertex v: g.adjList.keySet()) {
+            visited.put(v, false);
+        }
+        if (sourceV.equals(destV)) {
+            System.out.println("No. of cities expanded = " + 0);
+            System.out.println("Max. length of queue during search = " + 1);
+            System.out.println("Final path length = " + 0);
+            System.out.println("Path = " + source);
+            return;
+        }
+        Reference<Long> maxQueueSize = new Reference<>(0L);
+        List<Edge> path = DFSUtil(g, sourceV, destV, visited, 1, maxQueueSize);
+        if (path == null) {
+            System.err.println("Destination not reached");
+            return;
+        }
+        Collections.reverse(path);
+        long noOfCitiesExpanded = visited.values().stream().filter(b -> b).count();
+        long pathLength = path.stream().map(e -> e.distance).mapToLong(i -> i).sum();
+        String pathString = Stream.concat(Stream.of(source), path.stream().map(e -> e.secondCity.cityName))
+                .collect(Collectors.joining(","));
+        System.out.println("No. of cities expanded = " + noOfCitiesExpanded);
+        System.out.println("Max. length of queue during search = " + maxQueueSize.value);
+        System.out.println("Final path length = " + pathLength);
+        System.out.println("Path = " + pathString);
+    }
+
+    public static List<Edge> DFSUtil(Graph g, Vertex source, Vertex destination, Map<Vertex, Boolean> visited,
+                                     long currentQueueSize, Reference<Long> maxQueueSize) {
+        visited.put(source, true);
+        Set<Edge> neighbors = g.adjList.get(source);
+        Map<Vertex, Edge> neighborToEdge = neighbors.stream().collect(Collectors.toMap(e -> e.secondCity, e -> e));
+        currentQueueSize++;
+        maxQueueSize.update(Math.max(maxQueueSize.value, currentQueueSize));
+        if (neighborToEdge.containsKey(destination)) {
+            List<Edge> path = new ArrayList<>();
+            path.add(neighborToEdge.get(destination));
+            return path;
+        }
+        for (Edge e: neighbors) {
+            if (!e.firstCity.equals(source)) {
+                System.err.println("Error in edge direction or graph creation");
+                return null;
+            }
+            Vertex otherV = e.secondCity;
+            if (!visited.get(otherV)) {
+                List<Edge> path = DFSUtil(g, otherV, destination, visited, currentQueueSize, maxQueueSize);
+                if (path != null) {
+                    path.add(e);
+                    return path;
+                }
+            }
+        }
+        return null;
+    }
+
     public static void main(String[] args) {
         Graph g = intializeGraph();
+        String algo = args[0];
+        String heuristicPref = args[1];
+        String source = args[2];
+        String dest = args[3];
+
+        if (algo.equals("DFS")) {
+            DFS(g, source, dest);
+        } else {
+            System.out.println("Not yet implemented");
+        }
+    }
+
+    public static class Reference<T> {
+        public T value;
+
+        public Reference(T value) {
+            this.value = value;
+        }
+
+        public void update(T val) {
+            value = val;
+        }
+    }
+
+    public static class Pair<L, R> {
+        private L left;
+        private R right;
+
+        private Pair(L left, R right) {
+            this.left = left;
+            this.right = right;
+        }
+
+        public L getLeft() {
+            return left;
+        }
+
+        public R getRight() {
+            return right;
+        }
+
+        public static <A, B> Pair<A, B> of(A a, B b) {
+            return new Pair<>(a, b);
+        }
+
+        @Override
+        public String toString() {
+            return "Pair{" +
+                    "left=" + left +
+                    ", right=" + right +
+                    '}';
+        }
     }
 }
