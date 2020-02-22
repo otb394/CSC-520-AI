@@ -1,13 +1,17 @@
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.PriorityQueue;
 import java.util.Set;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -429,6 +433,90 @@ public class Search {
         return null;
     }
 
+    public static void AStar(Graph g, BiFunction<Vertex, Vertex, Double> heuristic, String source, String destination) {
+        final long INF = 100000000000000L;
+        Vertex sourceV = g.nameToVertex.get(source);
+        Vertex destV = g.nameToVertex.get(destination);
+        Function<Vertex, Double> hFun = v -> heuristic.apply(v, destV);
+        Set<Vertex> expanded = new HashSet<>();
+        //Set<Vertex> inQueue = new HashSet<>();
+        //Map<Vertex, Boolean> expanded = g.nameToVertex.values().stream().collect(Collectors.toMap(v -> v, v -> false));
+        //Map<Vertex, Boolean> inQueue = g.nameToVertex.values().stream().collect(Collectors.toMap(v -> v, v -> false));
+        Map<Vertex, Long> gFun = g.nameToVertex.values().stream()
+                .collect(Collectors.toMap(v -> v, v -> INF));
+        gFun.put(sourceV, 0L);
+
+        Function<Vertex, Double> f = v -> gFun.get(v) + hFun.apply(v);
+        PriorityQueue<Vertex> pq = new PriorityQueue<>(Comparator.comparing(f));
+        pq.add(sourceV);
+        int maxQueueSize = 1;
+        //inQueue.add(sourceV);
+        Map<Vertex, Vertex> previousVertexInShortestPath = new HashMap<>();
+        previousVertexInShortestPath.put(sourceV, sourceV);
+        while (!pq.isEmpty()) {
+            Vertex head = pq.poll();
+            if (expanded.contains(head)) {
+                continue;
+            }
+            if (head.equals(destV)) {
+                break;
+            }
+            expanded.add(head);
+            Set<Edge> incidentEdges = g.adjList.get(head);
+            long pathFromSourceToHead = gFun.get(head);
+            for (Edge e: incidentEdges) {
+                Vertex otherV = e.secondCity;
+                long pathFromSourceToOtherV = gFun.get(otherV);
+                long newPathLength = pathFromSourceToHead + e.distance;
+                if (pathFromSourceToOtherV == INF) {
+                    gFun.put(otherV, newPathLength);
+                    pq.add(otherV);
+                    maxQueueSize = Math.max(maxQueueSize, pq.size());
+                    previousVertexInShortestPath.put(otherV, head);
+                } else if (pathFromSourceToOtherV > newPathLength) {
+                    gFun.put(otherV, newPathLength);
+                    previousVertexInShortestPath.put(otherV, head);
+                    if (!expanded.contains(otherV)) {
+                        pq.add(otherV);
+                        maxQueueSize = Math.max(maxQueueSize, pq.size());
+                    }
+                }
+            }
+        }
+        List<Vertex> finalPath = new ArrayList<>();
+        finalPath.add(destV);
+        Vertex v = destV;
+        while(true) {
+            Vertex parent = previousVertexInShortestPath.get(v);
+            if (parent == null || parent.equals(v)) {
+                break;
+            }
+            finalPath.add(parent);
+            v = parent;
+        }
+        Collections.reverse(finalPath);
+        /*
+        long temppl = 0L;
+        for (int i = 0; i < finalPath.size() - 1; i++) {
+            Vertex curr = finalPath.get(i);
+            Vertex next = finalPath.get(i+1);
+            Set<Edge> edges = g.adjList.get(curr);
+            for (Edge e: edges) {
+                if (e.secondCity.equals(next)) {
+                    temppl += e.distance;
+                    break;
+                }
+            }
+        }
+        System.out.println("temppl = " + temppl);
+        */
+        String pathString = finalPath.stream().map(x -> x.cityName).collect(Collectors.joining(","));
+        System.out.println("No. of cities expanded = " + expanded.size());
+        System.out.println("Max. length of queue during search = " + maxQueueSize);
+        System.out.println("Final path length = " + gFun.get(destV));
+        System.out.println("Path = " + pathString);
+    }
+
     public static void main(String[] args) {
         Graph g = intializeGraph();
         String algo = args[0];
@@ -438,6 +526,13 @@ public class Search {
 
         if (algo.equals("DFS")) {
             DFS(g, source, dest);
+        } else if (algo.equals("A*")) {
+            if (heuristicPref.equals("0")) {
+                AStar(g, Search::sphericalHeuristic, source, dest);
+            } else {
+                //TODO: Get your own heuristic here
+                AStar(g, Search::sphericalHeuristic, source, dest);
+            }
         } else {
             System.out.println("Not yet implemented");
         }
