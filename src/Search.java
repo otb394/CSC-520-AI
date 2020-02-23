@@ -424,7 +424,6 @@ public class Search {
         String pathString = Stream.concat(Stream.of(source), path.stream().map(e -> e.secondCity.cityName))
                 .collect(Collectors.joining(","));
         System.out.println("No. of cities expanded = " + noOfCitiesExpanded);
-        //TODO: Doubtful if all children at each level to be added to max length or only 1
         System.out.println("Max. length of queue during search = " + maxQueueSize.value);
         System.out.println("Final path length = " + pathLength);
         System.out.println("Path = " + pathString);
@@ -435,7 +434,7 @@ public class Search {
         visited.put(source, true);
         Set<Edge> neighbors = g.adjList.get(source);
         Map<Vertex, Edge> neighborToEdge = neighbors.stream().collect(Collectors.toMap(e -> e.secondCity, e -> e));
-        currentQueueSize++;
+        currentQueueSize += neighbors.size();
         maxQueueSize.update(Math.max(maxQueueSize.value, currentQueueSize));
         if (neighborToEdge.containsKey(destination)) {
             List<Edge> path = new ArrayList<>();
@@ -474,6 +473,7 @@ public class Search {
         PriorityQueue<Vertex> pq = new PriorityQueue<>(Comparator.comparing(f));
         pq.add(sourceV);
         int maxQueueSize = 1;
+        int effectiveQueueSize = 1;
         //inQueue.add(sourceV);
         Map<Vertex, Vertex> previousVertexInShortestPath = new HashMap<>();
         previousVertexInShortestPath.put(sourceV, sourceV);
@@ -481,6 +481,8 @@ public class Search {
             Vertex head = pq.poll();
             if (expanded.contains(head)) {
                 continue;
+            } else {
+                effectiveQueueSize--;
             }
             if (head.equals(destV)) {
                 break;
@@ -495,14 +497,14 @@ public class Search {
                 if (pathFromSourceToOtherV == INF) {
                     gFun.put(otherV, newPathLength);
                     pq.add(otherV);
-                    maxQueueSize = Math.max(maxQueueSize, pq.size());
+                    effectiveQueueSize++;
+                    maxQueueSize = Math.max(maxQueueSize, effectiveQueueSize);
                     previousVertexInShortestPath.put(otherV, head);
                 } else if (pathFromSourceToOtherV > newPathLength) {
                     gFun.put(otherV, newPathLength);
                     previousVertexInShortestPath.put(otherV, head);
                     if (!expanded.contains(otherV)) {
                         pq.add(otherV);
-                        maxQueueSize = Math.max(maxQueueSize, pq.size());
                     }
                 }
             }
