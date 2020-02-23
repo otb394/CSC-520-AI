@@ -16,6 +16,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class Search {
+    private static final long INF = 100000000000000L;
     private static List<Vertex> VERTICES =
             Arrays.asList(
                     new Vertex("albanyGA",        31.58,  84.17),
@@ -399,6 +400,7 @@ public class Search {
         String pathString = Stream.concat(Stream.of(source), path.stream().map(e -> e.secondCity.cityName))
                 .collect(Collectors.joining(","));
         System.out.println("No. of cities expanded = " + noOfCitiesExpanded);
+        //TODO: Doubtful if all children at each level to be added to max length or only 1
         System.out.println("Max. length of queue during search = " + maxQueueSize.value);
         System.out.println("Final path length = " + pathLength);
         System.out.println("Path = " + pathString);
@@ -434,7 +436,6 @@ public class Search {
     }
 
     public static void AStar(Graph g, BiFunction<Vertex, Vertex, Double> heuristic, String source, String destination) {
-        final long INF = 100000000000000L;
         Vertex sourceV = g.nameToVertex.get(source);
         Vertex destV = g.nameToVertex.get(destination);
         Function<Vertex, Double> hFun = v -> heuristic.apply(v, destV);
@@ -511,10 +512,124 @@ public class Search {
         System.out.println("temppl = " + temppl);
         */
         String pathString = finalPath.stream().map(x -> x.cityName).collect(Collectors.joining(","));
+        System.out.println("A*");
         System.out.println("No. of cities expanded = " + expanded.size());
         System.out.println("Max. length of queue during search = " + maxQueueSize);
         System.out.println("Final path length = " + gFun.get(destV));
         System.out.println("Path = " + pathString);
+    }
+
+    public static void RBFS(Graph g, BiFunction<Vertex, Vertex, Double> heuristic, String source, String destination) {
+        final long INF = 100000000000000L;
+        Vertex sourceV = g.nameToVertex.get(source);
+        Vertex destV = g.nameToVertex.get(destination);
+        Function<Vertex, Double> hFun = v -> heuristic.apply(v, destV);
+        /*
+        Map<Vertex, Long> gFun = g.nameToVertex.values().stream()
+                .collect(Collectors.toMap(v -> v, v -> INF));
+        gFun.put(sourceV, 0L);
+         */
+        Reference<Long> noOfCitiesExpanded = new Reference<>(0L);
+        Reference<Long> maxQueueSize = new Reference<>(0L);
+        Node result = RBFSUtil(g, new Node(sourceV, null, 0, hFun.apply(sourceV)), null,
+                destV, INF, hFun, noOfCitiesExpanded, 0, maxQueueSize);
+        if (result == null) {
+            System.err.println("Destination not found by RBFS");
+            return;
+        }
+
+        List<Vertex> pathList = new ArrayList<>();
+        pathList.add(result.vertex);
+        Node current = result;
+        while(true) {
+            Node parent = current.parent;
+            if (parent == null) {
+                break;
+            }
+            pathList.add(parent.vertex);
+            current = parent;
+        }
+        Collections.reverse(pathList);
+        String pathString = pathList.stream().map(v -> v.cityName).collect(Collectors.joining(","));
+
+        System.out.println("RBFS");
+        System.out.println("No. of cities expanded = " + noOfCitiesExpanded.value);
+        System.out.println("Max. length of queue during search = " + maxQueueSize.value);
+        System.out.println("Final path length = " + result.gValue);
+        System.out.println("Path = " + pathString);
+    }
+
+    public static Node RBFSUtil(Graph g, Node current, Node parent,
+                                Vertex destination,
+                                double fLimit, Function<Vertex,
+                                Double> hFun, Reference<Long> expandCount,
+                                long successorQueueSize, Reference<Long> maxQueueSize) {
+//        System.out.println("Current node =" + current.vertex.cityName);
+        if (current.vertex.equals(destination)) {
+            return current;
+        }
+        expandCount.update(expandCount.value + 1);
+        List<Node> children = current.generateChildren(g, parent, hFun);
+        successorQueueSize += children.size();
+        maxQueueSize.update(Math.max(maxQueueSize.value, successorQueueSize));
+        if (children.isEmpty()) {
+            current.fValue = INF;
+            return null;
+        }
+        for (Node child: children) {
+            child.fValue = Math.max(child.gValue + child.hValue, current.fValue);
+        }
+        while (true) {
+            //TODO: Can be improved as best and second best can be found in linear without nLogn for sorting
+            children.sort(Node::compareTo);
+            Node bestNode = children.get(0);
+//            System.out.println("Best node = " + bestNode.vertex.cityName);
+//            System.out.println("Best f-value = " + bestNode.fValue);
+            if (bestNode.fValue > fLimit) {
+                current.fValue = bestNode.fValue;
+                return null;
+            }
+            Node result;
+            if (children.size() > 1) {
+                result = RBFSUtil(g, bestNode, current, destination, Math.min(fLimit, children.get(1).fValue),
+                        hFun, expandCount, successorQueueSize, maxQueueSize);
+            } else {
+                result = RBFSUtil(g, bestNode, current, destination, fLimit, hFun, expandCount, successorQueueSize,
+                        maxQueueSize);
+            }
+            if (result != null) {
+                return result;
+            }
+        }
+    }
+
+    private static class Node implements Comparable<Node> {
+        public Vertex vertex;
+        public Node parent;
+        public double fValue;
+        public long gValue;
+        public double hValue;
+
+        public Node(Vertex v, Node parent, long gValue, double hValue) {
+            this.vertex = v;
+            this.parent = parent;
+            this.gValue = gValue;
+            this.hValue = hValue;
+            this.fValue = gValue + hValue;
+        }
+
+        public List<Node> generateChildren(Graph g, Node parent, Function<Vertex, Double> hFun) {
+            return g.adjList.get(vertex).stream()
+                                        .filter(e -> (parent == null || !e.secondCity.equals(parent.vertex)))
+                                        .map(e -> new Node(e.secondCity, this, gValue + e.distance,
+                                                hFun.apply(e.secondCity)))
+                                        .collect(Collectors.toList());
+        }
+
+        @Override
+        public int compareTo(Node node) {
+            return Double.compare(fValue, node.fValue);
+        }
     }
 
     public static void main(String[] args) {
@@ -533,8 +648,15 @@ public class Search {
                 //TODO: Get your own heuristic here
                 AStar(g, Search::sphericalHeuristic, source, dest);
             }
+        } else if (algo.equals("RBFS")) {
+            if (heuristicPref.equals("0")) {
+                RBFS(g, Search::sphericalHeuristic, source, dest);
+            } else {
+                //TODO: Get your own heuristic here
+                RBFS(g, Search::sphericalHeuristic, source, dest);
+            }
         } else {
-            System.out.println("Not yet implemented");
+            System.out.println("Unrecognized algo = " + algo);
         }
     }
 
