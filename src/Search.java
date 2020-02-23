@@ -405,11 +405,11 @@ public class Search {
             visited.put(v, false);
         }
         if (sourceV.equals(destV)) {
-//            System.out.println("DFS");
-//            System.out.println("No. of cities expanded = " + 0);
-//            System.out.println("Max. length of queue during search = " + 1);
-//            System.out.println("Final path length = " + 0);
-//            System.out.println("Path = " + source);
+            System.out.println("DFS");
+            System.out.println("No. of cities expanded = " + 0);
+            System.out.println("Max. length of queue during search = " + 1);
+            System.out.println("Final path length = " + 0);
+            System.out.println("Path = " + source);
             return new Stats(0, 1);
         }
         Reference<Long> maxQueueSize = new Reference<>(0L);
@@ -423,11 +423,11 @@ public class Search {
         long pathLength = path.stream().map(e -> e.distance).mapToLong(i -> i).sum();
         String pathString = Stream.concat(Stream.of(source), path.stream().map(e -> e.secondCity.cityName))
                 .collect(Collectors.joining(","));
-//        System.out.println("DFS");
-//        System.out.println("No. of cities expanded = " + noOfCitiesExpanded);
-//        System.out.println("Max. length of queue during search = " + maxQueueSize.value);
-//        System.out.println("Final path length = " + pathLength);
-//        System.out.println("Path = " + pathString);
+        System.out.println("DFS");
+        System.out.println("No. of cities expanded = " + noOfCitiesExpanded);
+        System.out.println("Max. length of queue during search = " + maxQueueSize.value);
+        System.out.println("Final path length = " + pathLength);
+        System.out.println("Path = " + pathString);
         return new Stats(noOfCitiesExpanded, maxQueueSize.value);
     }
 
@@ -539,11 +539,11 @@ public class Search {
         System.out.println("temppl = " + temppl);
         */
         String pathString = finalPath.stream().map(x -> x.cityName).collect(Collectors.joining(","));
-//        System.out.println("A*");
-//        System.out.println("No. of cities expanded = " + expanded.size());
-//        System.out.println("Max. length of queue during search = " + maxQueueSize);
-//        System.out.println("Final path length = " + gFun.get(destV));
-//        System.out.println("Path = " + pathString);
+        System.out.println("A*");
+        System.out.println("No. of cities expanded = " + expanded.size());
+        System.out.println("Max. length of queue during search = " + maxQueueSize);
+        System.out.println("Final path length = " + gFun.get(destV));
+        System.out.println("Path = " + pathString);
         return new Stats(expanded.size(), maxQueueSize);
     }
 
@@ -551,11 +551,6 @@ public class Search {
         final long INF = 100000000000000L;
         Vertex sourceV = g.nameToVertex.get(source);
         Vertex destV = g.nameToVertex.get(destination);
-        /*
-        Map<Vertex, Long> gFun = g.nameToVertex.values().stream()
-                .collect(Collectors.toMap(v -> v, v -> INF));
-        gFun.put(sourceV, 0L);
-         */
         Reference<Long> noOfCitiesExpanded = new Reference<>(0L);
         Reference<Long> maxQueueSize = new Reference<>(0L);
         Node result = RBFSUtil(g, new Node(sourceV, null, 0, hFun.apply(sourceV)), null,
@@ -579,11 +574,11 @@ public class Search {
         Collections.reverse(pathList);
         String pathString = pathList.stream().map(v -> v.cityName).collect(Collectors.joining(","));
 
-//        System.out.println("RBFS");
-//        System.out.println("No. of cities expanded = " + noOfCitiesExpanded.value);
-//        System.out.println("Max. length of queue during search = " + maxQueueSize.value);
-//        System.out.println("Final path length = " + result.gValue);
-//        System.out.println("Path = " + pathString);
+        System.out.println("RBFS");
+        System.out.println("No. of cities expanded = " + noOfCitiesExpanded.value);
+        System.out.println("Max. length of queue during search = " + maxQueueSize.value);
+        System.out.println("Final path length = " + result.gValue);
+        System.out.println("Path = " + pathString);
         return new Stats(noOfCitiesExpanded.value, maxQueueSize.value);
     }
 
@@ -592,7 +587,6 @@ public class Search {
                                 double fLimit, Function<Vertex,
                                 Double> hFun, Reference<Long> expandCount,
                                 long successorQueueSize, Reference<Long> maxQueueSize) {
-//        System.out.println("Current node =" + current.vertex.cityName);
         if (current.vertex.equals(destination)) {
             return current;
         }
@@ -608,7 +602,6 @@ public class Search {
             child.fValue = Math.max(child.gValue + child.hValue, current.fValue);
         }
         while (true) {
-            //TODO: Can be improved as best and second best can be found in linear without nLogn for sorting
             children.sort(Node::compareTo);
             Node bestNode = children.get(0);
 //            System.out.println("Best node = " + bestNode.vertex.cityName);
@@ -662,7 +655,6 @@ public class Search {
 
     public static void main(String[] args) {
         Graph g = intializeGraph();
-        /*
         String algo = args[0];
         String heuristicPref = args[1];
         String source = args[2];
@@ -691,8 +683,6 @@ public class Search {
         } else {
             System.out.println("Unrecognized algo = " + algo);
         }
-         */
-        analyze(g);
     }
 
     public static void analyze(Graph g) {
@@ -710,12 +700,10 @@ public class Search {
                     Function<Vertex, Double> hopHeuristic =
                             vertex -> (((double) g.minimumCostArc) * hops.get(vertex));
                     Stats stats2 = AStar(g, hopHeuristic, source.cityName, dest.cityName);
-                    /*
                     if (stats1.expandedCities != stats2.expandedCities) {
                         System.out.println(String.format("Expanded cities are not equal for (%s,%s): (%d, %d)",
                                 source.cityName, dest.cityName, stats1.expandedCities, stats2.expandedCities));
                     }
-                     */
                     if (stats1.maxQueueSize != stats2.maxQueueSize) {
                         System.out.println(String.format("Max queue sizes cities are not equal for (%s,%s): (%d, %d)",
                                 source.cityName, dest.cityName, stats1.maxQueueSize, stats2.maxQueueSize));
@@ -725,22 +713,29 @@ public class Search {
         }
 
         /*
-
-        long expandedCitySum = 0L; //TODO: This may overflow
+        long expandedCitySum = 0L;
         long expandedCityMax = Long.MIN_VALUE;
         long expandedCityMin = Long.MAX_VALUE;
         long queueSizeSum = 0L;
         long queueSizeMax = Long.MIN_VALUE;
         long queueSizeMin = Long.MAX_VALUE;
+        Pair<Integer,Integer> worstPairForExpandedCities = null;
+        Pair<Integer,Integer> worstPairForQueueSize = null;
         long count = 0;
         for (int firstIndex = 0; firstIndex < noOfVertices; firstIndex++) {
             for (int secondIndex = 0; secondIndex < noOfVertices; secondIndex++) {
                 if (firstIndex != secondIndex) {
                     Stats stats = DFS(g, vertices.get(firstIndex).cityName, vertices.get(secondIndex).cityName);
-                    expandedCityMax = Math.max(expandedCityMax, stats.expandedCities);
+                    if (stats.expandedCities > expandedCityMax) {
+                        expandedCityMax = stats.expandedCities;
+                        worstPairForExpandedCities = Pair.of(firstIndex, secondIndex);
+                    }
                     expandedCityMin = Math.min(expandedCityMin, stats.expandedCities);
                     expandedCitySum += stats.expandedCities;
-                    queueSizeMax = Math.max(queueSizeMax, stats.maxQueueSize);
+                    if (stats.maxQueueSize > queueSizeMax) {
+                        queueSizeMax = stats.maxQueueSize;
+                        worstPairForQueueSize = Pair.of(firstIndex, secondIndex);
+                    }
                     queueSizeMin = Math.min(queueSizeMin, stats.maxQueueSize);
                     queueSizeSum += stats.maxQueueSize;
                     count++;
@@ -754,6 +749,12 @@ public class Search {
         System.out.println("Maximum size of the queue during a single path search (Max) = " + queueSizeMax);
         System.out.println("Maximum size of the queue during a single path search (Min) = " + queueSizeMin);
         System.out.println("Maximum size of the queue during a single path search (Avg) = " + queueSizeSum / count);
+        System.out.println(String.format("Worst pair for expanded cities = (%s,%s)",
+                vertices.get(worstPairForExpandedCities.getLeft()).cityName,
+                vertices.get(worstPairForExpandedCities.getRight()).cityName));
+        System.out.println(String.format("Worst pair for queue size = (%s,%s)",
+                vertices.get(worstPairForQueueSize.getLeft()).cityName,
+                vertices.get(worstPairForQueueSize.getRight()).cityName));
 
 
         expandedCitySum = 0L; //TODO: This may overflow
@@ -771,10 +772,16 @@ public class Search {
                     Vertex dest = vertices.get(secondIndex);
                     Stats stats = AStar(g, v -> sphericalHeuristic(v, dest), vertices.get(firstIndex).cityName,
                             dest.cityName);
-                    expandedCityMax = Math.max(expandedCityMax, stats.expandedCities);
+                    if (stats.expandedCities > expandedCityMax) {
+                        expandedCityMax = stats.expandedCities;
+                        worstPairForExpandedCities = Pair.of(firstIndex, secondIndex);
+                    }
                     expandedCityMin = Math.min(expandedCityMin, stats.expandedCities);
                     expandedCitySum += stats.expandedCities;
-                    queueSizeMax = Math.max(queueSizeMax, stats.maxQueueSize);
+                    if (stats.maxQueueSize > queueSizeMax) {
+                        queueSizeMax = stats.maxQueueSize;
+                        worstPairForQueueSize = Pair.of(firstIndex, secondIndex);
+                    }
                     queueSizeMin = Math.min(queueSizeMin, stats.maxQueueSize);
                     queueSizeSum += stats.maxQueueSize;
                     count++;
@@ -788,6 +795,12 @@ public class Search {
         System.out.println("Maximum size of the queue during a single path search (Max) = " + queueSizeMax);
         System.out.println("Maximum size of the queue during a single path search (Min) = " + queueSizeMin);
         System.out.println("Maximum size of the queue during a single path search (Avg) = " + queueSizeSum / count);
+        System.out.println(String.format("Worst pair for expanded cities = (%s,%s)",
+                vertices.get(worstPairForExpandedCities.getLeft()).cityName,
+                vertices.get(worstPairForExpandedCities.getRight()).cityName));
+        System.out.println(String.format("Worst pair for queue size = (%s,%s)",
+                vertices.get(worstPairForQueueSize.getLeft()).cityName,
+                vertices.get(worstPairForQueueSize.getRight()).cityName));
 
 
         expandedCitySum = 0L; //TODO: This may overflow
@@ -805,10 +818,16 @@ public class Search {
                     Vertex dest = vertices.get(secondIndex);
                     Stats stats = RBFS(g, v -> sphericalHeuristic(v, dest), vertices.get(firstIndex).cityName,
                             dest.cityName);
-                    expandedCityMax = Math.max(expandedCityMax, stats.expandedCities);
+                    if (stats.expandedCities > expandedCityMax) {
+                        expandedCityMax = stats.expandedCities;
+                        worstPairForExpandedCities = Pair.of(firstIndex, secondIndex);
+                    }
                     expandedCityMin = Math.min(expandedCityMin, stats.expandedCities);
                     expandedCitySum += stats.expandedCities;
-                    queueSizeMax = Math.max(queueSizeMax, stats.maxQueueSize);
+                    if (stats.maxQueueSize > queueSizeMax) {
+                        queueSizeMax = stats.maxQueueSize;
+                        worstPairForQueueSize = Pair.of(firstIndex, secondIndex);
+                    }
                     queueSizeMin = Math.min(queueSizeMin, stats.maxQueueSize);
                     queueSizeSum += stats.maxQueueSize;
                     count++;
@@ -822,7 +841,13 @@ public class Search {
         System.out.println("Maximum size of the queue during a single path search (Max) = " + queueSizeMax);
         System.out.println("Maximum size of the queue during a single path search (Min) = " + queueSizeMin);
         System.out.println("Maximum size of the queue during a single path search (Avg) = " + queueSizeSum / count);
-         */
+        System.out.println(String.format("Worst pair for expanded cities = (%s,%s)",
+                vertices.get(worstPairForExpandedCities.getLeft()).cityName,
+                vertices.get(worstPairForExpandedCities.getRight()).cityName));
+        System.out.println(String.format("Worst pair for queue size = (%s,%s)",
+                vertices.get(worstPairForQueueSize.getLeft()).cityName,
+                vertices.get(worstPairForQueueSize.getRight()).cityName));
+        */
     }
 
     private static class Stats {
