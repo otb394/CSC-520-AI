@@ -4,13 +4,14 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.PriorityQueue;
+import java.util.Queue;
 import java.util.Set;
-import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -314,10 +315,12 @@ public class Search {
     private static class Graph {
         public Map<Vertex, Set<Edge>> adjList;
         public Map<String, Vertex> nameToVertex;
+        public int minimumCostArc;
 
         public Graph() {
             this.adjList = new HashMap<>();
             this.nameToVertex = new HashMap<>();
+            this.minimumCostArc = Integer.MAX_VALUE;
         }
 
         public Graph addVertex(Vertex v) {
@@ -337,6 +340,7 @@ public class Search {
             edges2.add(reverseEdge);
             adjList.put(v1, edges1);
             adjList.put(v2, edges2);
+            this.minimumCostArc = Math.min(minimumCostArc, e.distance);
             return this;
         }
     }
@@ -368,9 +372,29 @@ public class Search {
                 + sq(69.5 * (Math.cos(((lat1+lat2)/360.0)*Math.PI)) * (long1 - long2)));
     }
 
-    public static double myHeuristic(Vertex v1, Vertex v2) {
-        //TODO: Implement the hop heuristic
-        return sphericalHeuristic(v1, v2);
+    public static Map<Vertex, Long> getHopMap(Graph g, String source, String destination) {
+        Vertex sourceV = g.nameToVertex.get(source);
+        Vertex destV = g.nameToVertex.get(destination);
+        Map<Vertex, Long> minimumDistance = g.nameToVertex.values().stream()
+                .collect(Collectors.toMap(v -> v, v -> INF));
+        Set<Vertex> discovered = new HashSet<>();
+        minimumDistance.put(destV, 0L);
+        Queue<Vertex> queue = new LinkedList<>();
+        queue.add(destV);
+        discovered.add(destV);
+        while (!queue.isEmpty()) {
+            Vertex current = queue.poll();
+            List<Vertex> neighbors = g.adjList.get(current).stream().map(e -> e.secondCity)
+                    .collect(Collectors.toList());
+            for (Vertex neighbor: neighbors) {
+                if (!discovered.contains(neighbor)) {
+                    discovered.add(neighbor);
+                    minimumDistance.put(neighbor, minimumDistance.get(current) + 1);
+                    queue.add(neighbor);
+                }
+            }
+        }
+        return minimumDistance;
     }
 
     public static void DFS(Graph g, String source, String destination) {
@@ -435,10 +459,9 @@ public class Search {
         return null;
     }
 
-    public static void AStar(Graph g, BiFunction<Vertex, Vertex, Double> heuristic, String source, String destination) {
+    public static void AStar(Graph g, Function<Vertex, Double> hFun, String source, String destination) {
         Vertex sourceV = g.nameToVertex.get(source);
         Vertex destV = g.nameToVertex.get(destination);
-        Function<Vertex, Double> hFun = v -> heuristic.apply(v, destV);
         Set<Vertex> expanded = new HashSet<>();
         //Set<Vertex> inQueue = new HashSet<>();
         //Map<Vertex, Boolean> expanded = g.nameToVertex.values().stream().collect(Collectors.toMap(v -> v, v -> false));
@@ -519,11 +542,10 @@ public class Search {
         System.out.println("Path = " + pathString);
     }
 
-    public static void RBFS(Graph g, BiFunction<Vertex, Vertex, Double> heuristic, String source, String destination) {
+    public static void RBFS(Graph g, Function<Vertex, Double> hFun, String source, String destination) {
         final long INF = 100000000000000L;
         Vertex sourceV = g.nameToVertex.get(source);
         Vertex destV = g.nameToVertex.get(destination);
-        Function<Vertex, Double> hFun = v -> heuristic.apply(v, destV);
         /*
         Map<Vertex, Long> gFun = g.nameToVertex.values().stream()
                 .collect(Collectors.toMap(v -> v, v -> INF));
@@ -643,17 +665,21 @@ public class Search {
             DFS(g, source, dest);
         } else if (algo.equals("A*")) {
             if (heuristicPref.equals("0")) {
-                AStar(g, Search::sphericalHeuristic, source, dest);
+                AStar(g, vertex -> sphericalHeuristic(vertex, g.nameToVertex.get(dest)), source, dest);
             } else {
-                //TODO: Get your own heuristic here
-                AStar(g, Search::sphericalHeuristic, source, dest);
+                Map<Vertex, Long> hops = getHopMap(g, source, dest);
+                Function<Vertex, Double> hopHeuristic =
+                        vertex -> (((double) g.minimumCostArc) * hops.get(vertex));
+                AStar(g, hopHeuristic, source, dest);
             }
         } else if (algo.equals("RBFS")) {
             if (heuristicPref.equals("0")) {
-                RBFS(g, Search::sphericalHeuristic, source, dest);
+                RBFS(g, vertex -> sphericalHeuristic(vertex, g.nameToVertex.get(dest)), source, dest);
             } else {
-                //TODO: Get your own heuristic here
-                RBFS(g, Search::sphericalHeuristic, source, dest);
+                Map<Vertex, Long> hops = getHopMap(g, source, dest);
+                Function<Vertex, Double> hopHeuristic =
+                        vertex -> (((double) g.minimumCostArc) * hops.get(vertex));
+                RBFS(g, hopHeuristic, source, dest);
             }
         } else {
             System.out.println("Unrecognized algo = " + algo);
